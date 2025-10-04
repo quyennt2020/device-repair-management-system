@@ -64,15 +64,15 @@ const DashboardPage: React.FC = () => {
       setError('');
 
       // Load dashboard statistics
-      const statsResponse = await apiService.get<DashboardStats>('/analytics/dashboard/stats');
+      const statsResponse = await apiService.get<DashboardStats>('/api/dashboard/stats');
       if (statsResponse.success && statsResponse.data) {
         setStats(statsResponse.data);
       }
 
       // Load recent cases
-      const casesResponse = await apiService.get<RecentCase[]>('/cases/recent?limit=10');
+      const casesResponse = await apiService.get<RecentCase[]>('/api/cases');
       if (casesResponse.success && casesResponse.data) {
-        setRecentCases(casesResponse.data);
+        setRecentCases(casesResponse.data.slice(0, 10));
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load dashboard data');

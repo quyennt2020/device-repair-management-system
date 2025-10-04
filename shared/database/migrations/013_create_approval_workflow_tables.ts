@@ -47,7 +47,7 @@ export const createApprovalWorkflowTables: Migration = {
         instance_id UUID REFERENCES approval_instances(id) ON DELETE CASCADE,
         level INTEGER NOT NULL,
         approver_user_id UUID NOT NULL,
-        original_approver_user_id UUID, -- If delegated
+        original_approver_user_id UUID, /* If delegated */
         status VARCHAR(50) DEFAULT 'pending',
         comments TEXT,
         approved_at TIMESTAMP,
@@ -58,7 +58,7 @@ export const createApprovalWorkflowTables: Migration = {
       );
     `);
 
-    -- Escalation Records
+    // Escalation Records
     await client.query(`
       CREATE TABLE escalation_records (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -73,7 +73,7 @@ export const createApprovalWorkflowTables: Migration = {
       );
     `);
 
-    -- Delegation Records
+    // Delegation Records
     await client.query(`
       CREATE TABLE delegation_records (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -87,7 +87,7 @@ export const createApprovalWorkflowTables: Migration = {
       );
     `);
 
-    -- Approval Notifications Queue
+    // Approval Notifications Queue
     await client.query(`
       CREATE TABLE approval_notifications (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -106,7 +106,7 @@ export const createApprovalWorkflowTables: Migration = {
       );
     `);
 
-    -- Create indexes for performance
+    // Create indexes for performance
     await client.query(`
       CREATE INDEX idx_approval_workflows_name ON approval_workflows(name);
       CREATE INDEX idx_approval_workflows_active ON approval_workflows(is_active);
@@ -141,7 +141,7 @@ export const createApprovalWorkflowTables: Migration = {
       CREATE INDEX idx_approval_notifications_type ON approval_notifications(notification_type);
     `);
 
-    -- Create composite indexes for common queries
+    // Create composite indexes for common queries
     await client.query(`
       CREATE INDEX idx_approval_records_approver_status ON approval_records(approver_user_id, status);
       CREATE INDEX idx_approval_instances_status_level ON approval_instances(status, current_level);

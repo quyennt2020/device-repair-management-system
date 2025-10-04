@@ -103,6 +103,7 @@ export interface InspectionReport extends AuditableEntity {
 }
 
 export interface InspectionFinding {
+  id?: string;
   component: string;
   issue: string;
   severity: SeverityLevel;
@@ -111,6 +112,7 @@ export interface InspectionFinding {
 }
 
 export interface RecommendedPart {
+  id?: string;
   partName: string;
   partNumber?: string;
   quantity: number;
@@ -285,6 +287,7 @@ export interface DocumentImage {
   url: string;
   caption?: string;
   timestamp: Date;
+  imageType?: 'before' | 'during' | 'after';
 }
 
 // Document Creation/Update DTOs

@@ -84,7 +84,7 @@ export const createInventoryTables: Migration = {
         total_cost DECIMAL(10,2),
         warranty_months INTEGER DEFAULT 12,
         installation_date TIMESTAMP,
-        technician_id UUID REFERENCES technicians(id),
+        technician_id UUID, /* FK added in migration 020 */
         old_part_serial VARCHAR(100),
         new_part_serial VARCHAR(100),
         return_old_part BOOLEAN DEFAULT false,

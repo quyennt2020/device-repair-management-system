@@ -139,7 +139,11 @@ const RecentCasesTable: React.FC<RecentCasesTableProps> = ({ cases }) => {
             </Box>
             
             <Typography variant="caption" color="text.secondary">
-              Created {formatDistanceToNow(new Date(case_.createdAt), { addSuffix: true })}
+              {case_.createdAt ? (
+                <>Created {formatDistanceToNow(new Date(case_.createdAt), { addSuffix: true })}</>
+              ) : (
+                'No date'
+              )}
               {case_.assignedTechnician && ` • Assigned to ${case_.assignedTechnician}`}
             </Typography>
           </Box>
@@ -199,7 +203,7 @@ const RecentCasesTable: React.FC<RecentCasesTableProps> = ({ cases }) => {
               </TableCell>
               <TableCell>
                 <Typography variant="body2">
-                  {formatDistanceToNow(new Date(case_.createdAt), { addSuffix: true })}
+                  {case_.createdAt ? formatDistanceToNow(new Date(case_.createdAt), { addSuffix: true }) : 'No date'}
                 </Typography>
               </TableCell>
               <TableCell align="right">

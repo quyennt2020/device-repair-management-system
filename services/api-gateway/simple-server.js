@@ -1,28 +1,70 @@
-const express = require('express');
-const cors = require('cors');
+const http = require('http');
+const fs = require('fs');
 const path = require('path');
+const url = require('url');
 
-const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true
-}));
+// Helper function to parse JSON body
+function parseBody(req, callback) {
+  let body = '';
+  req.on('data', chunk => {
+    body += chunk.toString();
+  });
+  req.on('end', () => {
+    try {
+      const parsed = body ? JSON.parse(body) : {};
+      callback(null, parsed);
+    } catch (error) {
+      callback(error, null);
+    }
+  });
+}
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Helper function to send JSON response
+function sendJSON(res, data, statusCode = 200) {
+  res.writeHead(statusCode, {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': 'http://localhost:3000',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true'
+  });
+  res.end(JSON.stringify(data));
+}
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
+const server = http.createServer((req, res) => {
+  const parsedUrl = url.parse(req.url, true);
+  const method = req.method;
+  const pathname = parsedUrl.pathname;
 
-// Mock authentication endpoints
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
+  // Handle CORS preflight
+  if (method === 'OPTIONS') {
+    res.writeHead(200, {
+      'Access-Control-Allow-Origin': 'http://localhost:3000',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true'
+    });
+    res.end();
+    return;
+  }
+
+  // Health check endpoint
+  if (pathname === '/health' && method === 'GET') {
+    sendJSON(res, { status: 'OK', timestamp: new Date().toISOString() });
+    return;
+  }
+
+  // Mock authentication endpoints
+  if (pathname === '/api/auth/login' && method === 'POST') {
+    parseBody(req, (err, body) => {
+      if (err) {
+        sendJSON(res, { success: false, message: 'Invalid JSON' }, 400);
+        return;
+      }
+
+      const { username, password } = body;
     
     // Mock user data
     const mockUsers = [
@@ -79,32 +121,27 @@ app.post('/api/auth/login', async (req, res) => {
       }
     ];
 
-    const user = mockUsers.find(u => u.username === username);
-    
-    if (!user || (password !== 'admin123' && password !== 'tech123')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
+      const user = mockUsers.find(u => u.username === username);
 
-    const token = 'mock-jwt-token-' + Date.now();
-
-    res.json({
-      success: true,
-      data: {
-        user: user,
-        token: token
+      if (!user || (password !== 'admin123' && password !== 'tech123')) {
+        sendJSON(res, {
+          success: false,
+          message: 'Invalid credentials'
+        }, 401);
+        return;
       }
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
+
+      const token = 'mock-jwt-token-' + Date.now();
+
+      sendJSON(res, {
+        success: true,
+        data: {
+          user: user,
+          token: token
+        }
+      });
     });
   }
-});
 
 // Mock dashboard data endpoints
 app.get('/api/dashboard/stats', (req, res) => {

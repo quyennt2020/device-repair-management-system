@@ -4,11 +4,19 @@
   "description": "Simple API Gateway",
   "main": "simple-server.js",
   "scripts": {
-    "start": "node simple-server.js",
-    "dev": "node simple-server.js"
+    "start": "node db-server.js",
+    "dev": "node db-server.js",
+    "start:simple": "node simple-server.js",
+    "test": "jest"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "pg": "^8.11.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
   }
 }

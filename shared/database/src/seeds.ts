@@ -25,6 +25,15 @@ export async function seedDatabase(): Promise<void> {
         // Seed Sample Parts
         await seedSampleParts();
 
+        // Seed Sample Devices (connected to customers and device types)
+        await seedSampleDevices();
+
+        // Seed Sample Contracts (connected to customers)
+        await seedSampleContracts();
+
+        // Seed Sample Cases (connected to customers, devices, technicians)
+        await seedSampleCases();
+
         console.log('✅ Database seeding completed successfully!');
     } catch (error) {
         console.error('❌ Database seeding failed:', error);
@@ -75,20 +84,22 @@ async function seedDeviceTypes(): Promise<void> {
     ];
 
     for (const deviceType of deviceTypes) {
-        await db.query(`
-      INSERT INTO device_types (name, category, manufacturer, model_series, specifications, standard_service_hours, required_certifications, maintenance_checklist)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      ON CONFLICT (name) DO NOTHING
-    `, [
-            deviceType.name,
-            deviceType.category,
-            deviceType.manufacturer,
-            deviceType.model_series,
-            deviceType.specifications,
-            deviceType.standard_service_hours,
-            deviceType.required_certifications,
-            deviceType.maintenance_checklist
-        ]);
+        const existing = await db.query(`SELECT id FROM device_types WHERE name = $1 LIMIT 1`, [deviceType.name]);
+        if (existing.rows.length === 0) {
+            await db.query(`
+        INSERT INTO device_types (name, category, manufacturer, model_series, specifications, standard_service_hours, required_certifications, maintenance_checklist)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [
+                deviceType.name,
+                deviceType.category,
+                deviceType.manufacturer,
+                deviceType.model_series,
+                deviceType.specifications,
+                deviceType.standard_service_hours,
+                deviceType.required_certifications,
+                deviceType.maintenance_checklist
+            ]);
+        }
     }
 }
 
@@ -171,11 +182,13 @@ async function seedDocumentTypes(): Promise<void> {
     ];
 
     for (const docType of documentTypes) {
-        await db.query(`
-      INSERT INTO document_types (name, category, template_config, required_fields)
-      VALUES ($1, $2, $3, $4)
-      ON CONFLICT (name) DO NOTHING
-    `, [docType.name, docType.category, docType.template_config, docType.required_fields]);
+        const existing = await db.query(`SELECT id FROM document_types WHERE name = $1 AND category = $2 LIMIT 1`, [docType.name, docType.category]);
+        if (existing.rows.length === 0) {
+            await db.query(`
+        INSERT INTO document_types (name, category, template_config, required_fields)
+        VALUES ($1, $2, $3, $4)
+      `, [docType.name, docType.category, docType.template_config, docType.required_fields]);
+        }
     }
 }
 
@@ -729,11 +742,13 @@ async function seedWorkflowDefinitions(): Promise<void> {
     ];
 
     for (const workflow of workflows) {
-        await db.query(`
-      INSERT INTO workflow_definitions (name, version, config)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (name, version) DO NOTHING
-    `, [workflow.name, workflow.version, workflow.config]);
+        const existing = await db.query(`SELECT id FROM workflow_definitions WHERE name = $1 AND version = $2 LIMIT 1`, [workflow.name, workflow.version]);
+        if (existing.rows.length === 0) {
+            await db.query(`
+        INSERT INTO workflow_definitions (name, version, config)
+        VALUES ($1, $2, $3)
+      `, [workflow.name, workflow.version, workflow.config]);
+        }
     }
 }
 
@@ -784,22 +799,24 @@ async function seedSampleCustomers(): Promise<void> {
     ];
 
     for (const customer of customers) {
-        await db.query(`
-      INSERT INTO customers (customer_code, customer_type, company_name, tax_code, industry, contact_info, address_info, customer_tier, credit_limit, payment_terms)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      ON CONFLICT (customer_code) DO NOTHING
-    `, [
-            customer.customer_code,
-            customer.customer_type,
-            customer.company_name,
-            customer.tax_code,
-            customer.industry,
-            customer.contact_info,
-            customer.address_info,
-            customer.customer_tier,
-            customer.credit_limit,
-            customer.payment_terms
-        ]);
+        const existing = await db.query(`SELECT id FROM customers WHERE customer_code = $1 LIMIT 1`, [customer.customer_code]);
+        if (existing.rows.length === 0) {
+            await db.query(`
+        INSERT INTO customers (customer_code, customer_type, company_name, tax_code, industry, contact_info, address_info, customer_tier, credit_limit, payment_terms)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `, [
+                customer.customer_code,
+                customer.customer_type,
+                customer.company_name,
+                customer.tax_code,
+                customer.industry,
+                customer.contact_info,
+                customer.address_info,
+                customer.customer_tier,
+                customer.credit_limit,
+                customer.payment_terms
+            ]);
+        }
     }
 }
 
@@ -808,84 +825,47 @@ async function seedSampleTechnicians(): Promise<void> {
 
     const technicians = [
         {
-            employee_code: 'TECH-001',
-            user_id: '11111111-1111-1111-1111-111111111111',
-            personal_info: JSON.stringify({
-                full_name: 'Nguyễn Văn Tâm',
-                email: 'tam.nguyen@company.com',
-                phone: '+84-123-111-111'
-            }),
-            employment_info: JSON.stringify({
-                department: 'Technical Services',
-                position: 'Senior Technician',
-                hire_date: '2020-01-15'
-            }),
-            skills: JSON.stringify({
-                electronics: 5,
-                mechanical: 4,
-                software: 3
-            }),
-            certifications: JSON.stringify([
-                {
-                    name: 'Electronics Certification',
-                    code: 'electronics-cert',
-                    expiry_date: '2025-12-31'
-                }
-            ]),
-            schedule_info: JSON.stringify({
-                working_hours: '08:00-17:00',
-                available_days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
-            }),
-            max_concurrent_cases: 3
+            employee_id: 'TECH-001',
+            first_name: 'Văn Tâm',
+            last_name: 'Nguyễn',
+            email: 'tam.nguyen@company.com',
+            phone: '+84-123-111-111',
+            hire_date: '2020-01-15',
+            department: 'Technical Services',
+            position: 'Senior Technician',
+            status: 'active'
         },
         {
-            employee_code: 'TECH-002',
-            user_id: '22222222-2222-2222-2222-222222222222',
-            personal_info: JSON.stringify({
-                full_name: 'Trần Thị Lan',
-                email: 'lan.tran@company.com',
-                phone: '+84-123-222-222'
-            }),
-            employment_info: JSON.stringify({
-                department: 'Technical Services',
-                position: 'Technician',
-                hire_date: '2021-06-01'
-            }),
-            skills: JSON.stringify({
-                electronics: 4,
-                mechanical: 5,
-                software: 2
-            }),
-            certifications: JSON.stringify([
-                {
-                    name: 'Calibration Certification',
-                    code: 'calibration-cert',
-                    expiry_date: '2025-06-30'
-                }
-            ]),
-            schedule_info: JSON.stringify({
-                working_hours: '08:00-17:00',
-                available_days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
-            }),
-            max_concurrent_cases: 4
+            employee_id: 'TECH-002',
+            first_name: 'Thị Lan',
+            last_name: 'Trần',
+            email: 'lan.tran@company.com',
+            phone: '+84-123-222-222',
+            hire_date: '2021-06-01',
+            department: 'Technical Services',
+            position: 'Technician',
+            status: 'active'
         }
     ];
 
     for (const technician of technicians) {
-        await db.query(`
-      INSERT INTO technicians (employee_code, user_id, personal_info, employment_info, skills, certifications, schedule_info, max_concurrent_cases)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      ON CONFLICT (employee_code) DO NOTHING
-    `, [
-            technician.employee_code,
-            technician.user_id,
-            technician.personal_info,
-            technician.employment_info,
-            technician.skills,
-            technician.certifications,
-            technician.schedule_info,
-            technician.max_concurrent_cases
-        ]);
+        const existing = await db.query(`SELECT id FROM technicians WHERE employee_id = $1 LIMIT 1`, [technician.employee_id]);
+        if (existing.rows.length === 0) {
+            await db.query(`
+        INSERT INTO technicians (employee_id, first_name, last_name, email, phone, hire_date, department, position, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `, [
+                technician.employee_id,
+                technician.first_name,
+                technician.last_name,
+                technician.email,
+                technician.phone,
+                technician.hire_date,
+                technician.department,
+                technician.position,
+                technician.status
+            ]);
+        }
     }
 }
 
@@ -934,26 +914,28 @@ async function seedSampleTools(): Promise<void> {
     ];
 
     for (const tool of tools) {
-        await db.query(`
-      INSERT INTO service_tools (tool_code, tool_name, category, manufacturer, model, serial_number, purchase_date, purchase_cost, location, calibration_required, last_calibration_date, next_calibration_date, required_for_device_types, specifications)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      ON CONFLICT (tool_code) DO NOTHING
-    `, [
-            tool.tool_code,
-            tool.tool_name,
-            tool.category,
-            tool.manufacturer,
-            tool.model,
-            tool.serial_number,
-            tool.purchase_date,
-            tool.purchase_cost,
-            tool.location,
-            tool.calibration_required,
-            tool.last_calibration_date,
-            tool.next_calibration_date,
-            tool.required_for_device_types,
-            tool.specifications
-        ]);
+        const existing = await db.query(`SELECT id FROM service_tools WHERE tool_code = $1 LIMIT 1`, [tool.tool_code]);
+        if (existing.rows.length === 0) {
+            await db.query(`
+        INSERT INTO service_tools (tool_code, tool_name, category, manufacturer, model, serial_number, purchase_date, purchase_cost, location, calibration_required, last_calibration_date, next_calibration_date, required_for_device_types, specifications)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      `, [
+                tool.tool_code,
+                tool.tool_name,
+                tool.category,
+                tool.manufacturer,
+                tool.model,
+                tool.serial_number,
+                tool.purchase_date,
+                tool.purchase_cost,
+                tool.location,
+                tool.calibration_required,
+                tool.last_calibration_date,
+                tool.next_calibration_date,
+                tool.required_for_device_types,
+                tool.specifications
+            ]);
+        }
     }
 }
 
@@ -961,11 +943,13 @@ async function seedSampleParts(): Promise<void> {
     console.log('🔩 Seeding sample parts...');
 
     // First create a warehouse
-    await db.query(`
-    INSERT INTO warehouses (warehouse_name, warehouse_code, location, status)
-    VALUES ('Main Warehouse', 'WH-001', 'Hà Nội', 'active')
-    ON CONFLICT (warehouse_code) DO NOTHING
-  `);
+    const existingWarehouse = await db.query(`SELECT id FROM warehouses WHERE warehouse_code = 'WH-001' LIMIT 1`);
+    if (existingWarehouse.rows.length === 0) {
+        await db.query(`
+      INSERT INTO warehouses (warehouse_name, warehouse_code, location, status)
+      VALUES ('Main Warehouse', 'WH-001', 'Hà Nội', 'active')
+    `);
+    }
 
     const parts = [
         {
@@ -1015,20 +999,22 @@ async function seedSampleParts(): Promise<void> {
     ];
 
     for (const part of parts) {
-        await db.query(`
-      INSERT INTO spare_parts (part_number, part_name, category, manufacturer, specifications, compatible_devices, pricing_info, inventory_settings)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      ON CONFLICT (part_number) DO NOTHING
-    `, [
-            part.part_number,
-            part.part_name,
-            part.category,
-            part.manufacturer,
-            part.specifications,
-            part.compatible_devices,
-            part.pricing_info,
-            part.inventory_settings
-        ]);
+        const existing = await db.query(`SELECT id FROM spare_parts WHERE part_number = $1 LIMIT 1`, [part.part_number]);
+        if (existing.rows.length === 0) {
+            await db.query(`
+        INSERT INTO spare_parts (part_number, part_name, category, manufacturer, specifications, compatible_devices, pricing_info, inventory_settings)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [
+                part.part_number,
+                part.part_name,
+                part.category,
+                part.manufacturer,
+                part.specifications,
+                part.compatible_devices,
+                part.pricing_info,
+                part.inventory_settings
+            ]);
+        }
 
         // Add initial inventory
         await db.query(`
@@ -1036,9 +1022,264 @@ async function seedSampleParts(): Promise<void> {
       SELECT sp.id, w.id, 100, 10, 500
       FROM spare_parts sp, warehouses w
       WHERE sp.part_number = $1 AND w.warehouse_code = 'WH-001'
-      ON CONFLICT (spare_part_id, warehouse_id) DO NOTHING
+      AND NOT EXISTS (
+        SELECT 1 FROM part_inventory pi
+        WHERE pi.spare_part_id = sp.id AND pi.warehouse_id = w.id
+      )
     `, [part.part_number]);
     }
+}
+
+async function seedSampleDevices(): Promise<void> {
+    console.log('📱 Seeding sample devices...');
+
+    const devices = [
+        {
+            device_code: 'DEV-001',
+            serial_number: 'X100-2023-001',
+            manufacturer: 'TechCorp',
+            model: 'X100',
+            status: 'active'
+        },
+        {
+            device_code: 'DEV-002',
+            serial_number: 'PRO200-2023-002',
+            manufacturer: 'AnalyTech',
+            model: 'Pro 200',
+            status: 'active'
+        },
+        {
+            device_code: 'DEV-003',
+            serial_number: 'X100-2022-003',
+            manufacturer: 'TechCorp',
+            model: 'X100',
+            status: 'in_repair'
+        }
+    ];
+
+    for (const device of devices) {
+        const existing = await db.query(`SELECT id FROM devices WHERE device_code = $1 LIMIT 1`, [device.device_code]);
+        if (existing.rows.length === 0) {
+            await db.query(`
+        INSERT INTO devices (device_code, serial_number, manufacturer, model, status, device_type_id, customer_id)
+        SELECT $1, $2, $3, $4, $5,
+          (SELECT id FROM device_types WHERE manufacturer = $3 LIMIT 1),
+          (SELECT id FROM customers LIMIT 1)
+      `, [
+                device.device_code,
+                device.serial_number,
+                device.manufacturer,
+                device.model,
+                device.status
+            ]);
+        }
+    }
+}
+
+async function seedSampleContracts(): Promise<void> {
+    console.log('📋 Seeding sample contracts...');
+
+    const contracts = [
+        {
+            contract_number: 'CNT-2024-001',
+            customer_id: '(SELECT id FROM customers WHERE customer_code = \'CUST-001\' LIMIT 1)',
+            contract_type: 'maintenance',
+            start_date: '2024-01-01',
+            end_date: '2024-12-31',
+            value: 120000000,
+            currency: 'VND',
+            payment_schedule: 'quarterly',
+            status: 'active',
+            response_time_hours: 24,
+            resolution_time_hours: 72,
+            annual_visit_quota: 12
+        },
+        {
+            contract_number: 'CNT-2024-002',
+            customer_id: '(SELECT id FROM customers WHERE customer_code = \'CUST-002\' LIMIT 1)',
+            contract_type: 'full_service',
+            start_date: '2024-02-01',
+            end_date: '2025-01-31',
+            value: 200000000,
+            currency: 'VND',
+            payment_schedule: 'monthly',
+            status: 'active',
+            response_time_hours: 12,
+            resolution_time_hours: 48,
+            annual_visit_quota: 24
+        }
+    ];
+
+    for (const contract of contracts) {
+        const existing = await db.query(`SELECT id FROM service_contracts WHERE contract_number = $1 LIMIT 1`, [contract.contract_number]);
+        if (existing.rows.length === 0) {
+            await db.query(`
+        INSERT INTO service_contracts (contract_number, customer_id, contract_type, start_date, end_date, value, currency, payment_schedule, status, response_time_hours, resolution_time_hours, annual_visit_quota)
+        SELECT $1, ${contract.customer_id}, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+      `, [
+                contract.contract_number,
+                contract.contract_type,
+                contract.start_date,
+                contract.end_date,
+                contract.value,
+                contract.currency,
+                contract.payment_schedule,
+                contract.status,
+                contract.response_time_hours,
+                contract.resolution_time_hours,
+                contract.annual_visit_quota
+            ]);
+        }
+    }
+}
+
+async function seedSampleCases(): Promise<void> {
+    console.log('🔧 Seeding sample cases...');
+
+    const cases = [
+        {
+            case_number: 'CASE-2024-001',
+            case_type: 'maintenance',
+            priority: 'medium',
+            status: 'in_progress',
+            reported_issue: 'Màn hình LCD hiển thị không rõ',
+            diagnosis: 'LCD bị mờ do ánh sáng nền yếu'
+        },
+        {
+            case_number: 'CASE-2024-002',
+            case_type: 'repair',
+            priority: 'high',
+            status: 'assigned',
+            reported_issue: 'Kênh 3 và 4 không đọc được tín hiệu',
+            diagnosis: null
+        },
+        {
+            case_number: 'CASE-2024-003',
+            case_type: 'calibration',
+            priority: 'low',
+            status: 'completed',
+            reported_issue: 'Hiệu chuẩn định kỳ hàng năm',
+            diagnosis: 'Độ chính xác sai lệch 0.3%'
+        }
+    ];
+
+    for (const repairCase of cases) {
+        const existing = await db.query(`SELECT id FROM repair_cases WHERE case_number = $1 LIMIT 1`, [repairCase.case_number]);
+        if (existing.rows.length === 0) {
+            await db.query(`
+        INSERT INTO repair_cases (case_number, customer_id, device_id, case_type, priority, status, reported_issue, diagnosis)
+        SELECT $1,
+          (SELECT id FROM customers LIMIT 1),
+          (SELECT id FROM devices LIMIT 1),
+          $2, $3, $4, $5, $6
+      `, [
+                repairCase.case_number,
+                repairCase.case_type,
+                repairCase.priority,
+                repairCase.status,
+                repairCase.reported_issue,
+                repairCase.diagnosis
+            ]);
+        }
+    }
+
+    // Assign technicians to cases
+    console.log('👷 Assigning technicians to cases...');
+
+    await db.query(`
+    INSERT INTO case_assignments (case_id, technician_id, assignment_type, assigned_date, status)
+    SELECT
+      rc.id,
+      t.id,
+      'primary',
+      NOW(),
+      'active'
+    FROM repair_cases rc
+    CROSS JOIN technicians t
+    WHERE rc.case_number = 'CASE-2024-001' AND t.employee_id = 'TECH-001'
+    AND NOT EXISTS (
+      SELECT 1 FROM case_assignments ca
+      WHERE ca.case_id = rc.id AND ca.technician_id = t.id
+    )
+  `);
+
+    await db.query(`
+    INSERT INTO case_assignments (case_id, technician_id, assignment_type, assigned_date, status)
+    SELECT
+      rc.id,
+      t.id,
+      'primary',
+      NOW(),
+      'active'
+    FROM repair_cases rc
+    CROSS JOIN technicians t
+    WHERE rc.case_number = 'CASE-2024-002' AND t.employee_id = 'TECH-002'
+    AND NOT EXISTS (
+      SELECT 1 FROM case_assignments ca
+      WHERE ca.case_id = rc.id AND ca.technician_id = t.id
+    )
+  `);
+
+    await db.query(`
+    INSERT INTO case_assignments (case_id, technician_id, assignment_type, assigned_date, status, completion_date)
+    SELECT
+      rc.id,
+      t.id,
+      'primary',
+      '2024-09-15',
+      'completed',
+      '2024-09-15'
+    FROM repair_cases rc
+    CROSS JOIN technicians t
+    WHERE rc.case_number = 'CASE-2024-003' AND t.employee_id = 'TECH-001'
+    AND NOT EXISTS (
+      SELECT 1 FROM case_assignments ca
+      WHERE ca.case_id = rc.id AND ca.technician_id = t.id
+    )
+  `);
+
+    // Assign tools to cases
+    console.log('🔨 Assigning tools to cases...');
+
+    await db.query(`
+    INSERT INTO tool_assignments (tool_id, case_id, technician_id, checkout_date, status)
+    SELECT
+      st.id,
+      rc.id,
+      t.id,
+      NOW(),
+      'active'
+    FROM service_tools st
+    CROSS JOIN repair_cases rc
+    CROSS JOIN technicians t
+    WHERE st.tool_code = 'TOOL-001'
+      AND rc.case_number = 'CASE-2024-001'
+      AND t.employee_id = 'TECH-001'
+    AND NOT EXISTS (
+      SELECT 1 FROM tool_assignments ta
+      WHERE ta.tool_id = st.id AND ta.case_id = rc.id
+    )
+  `);
+
+    await db.query(`
+    INSERT INTO tool_assignments (tool_id, case_id, technician_id, checkout_date, status)
+    SELECT
+      st.id,
+      rc.id,
+      t.id,
+      NOW(),
+      'active'
+    FROM service_tools st
+    CROSS JOIN repair_cases rc
+    CROSS JOIN technicians t
+    WHERE st.tool_code = 'TOOL-002'
+      AND rc.case_number = 'CASE-2024-002'
+      AND t.employee_id = 'TECH-002'
+    AND NOT EXISTS (
+      SELECT 1 FROM tool_assignments ta
+      WHERE ta.tool_id = st.id AND ta.case_id = rc.id
+    )
+  `);
 }
 
 // Run seeding if this file is executed directly

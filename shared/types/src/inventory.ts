@@ -1,5 +1,7 @@
 import { AuditableEntity, UUID } from './common';
 
+export type { UUID } from './common';
+
 export interface SparePart extends AuditableEntity {
   partNumber: string;
   partName: string;
@@ -51,8 +53,9 @@ export interface Warehouse extends AuditableEntity {
   status: WarehouseStatus;
 }
 
-export type WarehouseStatus = 'active' | 'closed' | 'maintenance';expor
-t interface PartInventory extends AuditableEntity {
+export type WarehouseStatus = 'active' | 'closed' | 'maintenance';
+
+export interface PartInventory extends AuditableEntity {
   sparePartId: UUID;
   warehouseId: UUID;
   quantityAvailable: number;
@@ -149,4 +152,119 @@ export interface InventorySearchCriteria {
   status?: PartStatus;
   lowStock?: boolean;
   compatibleDeviceId?: UUID;
+}
+
+// Enhanced transaction management types
+export interface PartReservation extends AuditableEntity {
+  sparePartId: UUID;
+  warehouseId: UUID;
+  quantity: number;
+  reservedFor: UUID; // case ID or quotation ID
+  reservationType: ReservationType;
+  reservedBy: UUID;
+  expiryDate?: Date;
+  status: ReservationStatus;
+  consumedQuantity: number;
+  releasedQuantity: number;
+}
+
+export type ReservationType = 'quotation' | 'case' | 'maintenance' | 'emergency';
+export type ReservationStatus = 'active' | 'consumed' | 'released' | 'expired';
+
+export interface InventoryReconciliation extends AuditableEntity {
+  reconciliationId: string;
+  warehouseId: UUID;
+  performedBy: UUID;
+  reconciliationType: ReconciliationType;
+  status: ReconciliationStatus;
+  startDate: Date;
+  completedDate?: Date;
+  totalItemsChecked: number;
+  discrepanciesFound: number;
+  totalAdjustmentValue: number;
+  notes?: string;
+}
+
+export type ReconciliationType = 'full_stocktake' | 'cycle_count' | 'spot_check' | 'variance_investigation';
+export type ReconciliationStatus = 'planned' | 'in_progress' | 'completed' | 'cancelled';
+
+export interface ReconciliationItem extends AuditableEntity {
+  reconciliationId: UUID;
+  sparePartId: UUID;
+  expectedQuantity: number;
+  countedQuantity: number;
+  variance: number;
+  varianceValue: number;
+  countedBy: UUID;
+  countedAt: Date;
+  notes?: string;
+  images?: string[];
+}
+
+export interface ConsumptionTracking extends AuditableEntity {
+  repairCaseId: UUID;
+  sparePartId: UUID;
+  warehouseId: UUID;
+  reservationId?: UUID;
+  quantityConsumed: number;
+  unitCost: number;
+  totalCost: number;
+  consumedBy: UUID;
+  consumedAt: Date;
+  workflowStepId?: string;
+  installationNotes?: string;
+  warrantyMonths: number;
+  serialNumbers?: string[];
+}
+
+export interface TransactionAuditLog extends AuditableEntity {
+  transactionId: UUID;
+  auditAction: AuditAction;
+  performedBy: UUID;
+  performedAt: Date;
+  oldValues?: Record<string, any>;
+  newValues?: Record<string, any>;
+  ipAddress?: string;
+  userAgent?: string;
+  reason?: string;
+}
+
+export type AuditAction = 'create' | 'update' | 'delete' | 'approve' | 'reject' | 'cancel';
+
+// Enhanced request types
+export interface CreateReservationRequest {
+  sparePartId: UUID;
+  warehouseId: UUID;
+  quantity: number;
+  reservedFor: UUID;
+  reservationType: ReservationType;
+  expiryDate?: Date;
+  notes?: string;
+}
+
+export interface ConsumeReservationRequest {
+  reservationId: UUID;
+  quantityToConsume: number;
+  repairCaseId: UUID;
+  workflowStepId?: string;
+  installationNotes?: string;
+  serialNumbers?: string[];
+}
+
+export interface ReconciliationRequest {
+  warehouseId: UUID;
+  reconciliationType: ReconciliationType;
+  itemsToCheck?: Array<{
+    sparePartId: UUID;
+    expectedQuantity?: number;
+  }>;
+  notes?: string;
+}
+
+export interface ReconciliationItemUpdate {
+  reconciliationId: UUID;
+  sparePartId: UUID;
+  countedQuantity: number;
+  notes?: string;
+  images?: string[];
 }

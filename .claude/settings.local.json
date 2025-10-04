@@ -1,7 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git init:*)",
+      "Bash(Stop-Process -Force)",
+      "Bash(python:*)",
+      "Bash(awk:*)",
+      "Bash(npm run docker:up:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout:*)",
+      "Bash(npm install)",
+      "Bash(node:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm start)",
       "Bash(git add:*)"
     ],
     "deny": [],

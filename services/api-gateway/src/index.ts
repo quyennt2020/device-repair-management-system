@@ -9,7 +9,7 @@ import { createServer } from 'http';
 import path from 'path';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { Pool } from 'pg';
+import { db } from '@drms/shared-database';
 
 const app = express();
 const server = createServer(app);
@@ -22,15 +22,6 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
-
-// Database connection
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'device_repair_db',
-  user: process.env.DB_USER || 'drms_user',
-  password: process.env.DB_PASSWORD || 'drms_password',
-});
 
 // Middleware
 app.use(helmet());

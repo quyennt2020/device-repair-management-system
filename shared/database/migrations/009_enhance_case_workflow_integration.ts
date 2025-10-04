@@ -192,34 +192,35 @@ export const enhanceCaseWorkflowIntegration: Migration = {
     `);
 
     // Insert default SLA configurations
+    /* Insert sample SLA configurations with gen_random_uuid() for created_by */
     await client.query(`
       INSERT INTO sla_configurations (
         name, customer_tier, service_type, response_time_hours, resolution_time_hours,
         escalation_rules, penalty_rules, priority, created_by
-      ) VALUES 
+      ) VALUES
       (
         'Standard Repair SLA', 'standard', 'repair', 24, 72,
         '[{"level": 1, "triggerAfterHours": 20, "escalationType": "warning", "notifyRoles": ["manager"], "actions": ["notify"]}, {"level": 2, "triggerAfterHours": 48, "escalationType": "critical", "notifyRoles": ["manager", "director"], "actions": ["notify", "reassign"]}]',
         '[{"breachType": "response", "penaltyPercentage": 5, "maxPenaltyAmount": 500, "gracePeriodHours": 2}, {"breachType": "resolution", "penaltyPercentage": 10, "maxPenaltyAmount": 1000, "gracePeriodHours": 4}]',
-        100, 'system'
+        100, gen_random_uuid()
       ),
       (
         'Premium Repair SLA', 'gold', 'repair', 8, 24,
         '[{"level": 1, "triggerAfterHours": 6, "escalationType": "warning", "notifyRoles": ["manager"], "actions": ["notify"]}, {"level": 2, "triggerAfterHours": 16, "escalationType": "critical", "notifyRoles": ["manager", "director"], "actions": ["notify", "reassign"]}]',
         '[{"breachType": "response", "penaltyPercentage": 10, "maxPenaltyAmount": 1000, "gracePeriodHours": 1}, {"breachType": "resolution", "penaltyPercentage": 15, "maxPenaltyAmount": 2000, "gracePeriodHours": 2}]',
-        200, 'system'
+        200, gen_random_uuid()
       ),
       (
         'Platinum Repair SLA', 'platinum', 'repair', 4, 12,
         '[{"level": 1, "triggerAfterHours": 3, "escalationType": "warning", "notifyRoles": ["manager"], "actions": ["notify"]}, {"level": 2, "triggerAfterHours": 8, "escalationType": "critical", "notifyRoles": ["manager", "director"], "actions": ["notify", "reassign"]}]',
         '[{"breachType": "response", "penaltyPercentage": 15, "maxPenaltyAmount": 2000, "gracePeriodHours": 0.5}, {"breachType": "resolution", "penaltyPercentage": 20, "maxPenaltyAmount": 5000, "gracePeriodHours": 1}]',
-        300, 'system'
+        300, gen_random_uuid()
       ),
       (
         'Standard Maintenance SLA', 'standard', 'maintenance', 48, 168,
         '[{"level": 1, "triggerAfterHours": 40, "escalationType": "warning", "notifyRoles": ["manager"], "actions": ["notify"]}, {"level": 2, "triggerAfterHours": 120, "escalationType": "critical", "notifyRoles": ["manager", "director"], "actions": ["notify", "reassign"]}]',
         '[{"breachType": "response", "penaltyPercentage": 3, "maxPenaltyAmount": 300, "gracePeriodHours": 4}, {"breachType": "resolution", "penaltyPercentage": 5, "maxPenaltyAmount": 500, "gracePeriodHours": 8}]',
-        100, 'system'
+        100, gen_random_uuid()
       )
       ON CONFLICT DO NOTHING;
     `);

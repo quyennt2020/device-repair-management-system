@@ -34,7 +34,7 @@ export const createToolsTables: Migration = {
       CREATE TABLE tool_assignments (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         tool_id UUID REFERENCES service_tools(id),
-        assigned_to_technician_id UUID REFERENCES technicians(id),
+        assigned_to_technician_id UUID, /* FK added in migration 020 */
         assigned_to_case_id UUID REFERENCES repair_cases(id),
         checkout_date TIMESTAMP DEFAULT NOW(),
         expected_return_date TIMESTAMP,

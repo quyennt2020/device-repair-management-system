@@ -6,7 +6,7 @@ import {
   CustomerSearchCriteria,
   CustomerContact,
   CustomerAddress
-} from '../../../shared/types/src/customer';
+} from '@drms/shared-types';
 
 export class CustomerController {
   constructor(private customerService: CustomerService) {}

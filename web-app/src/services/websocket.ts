@@ -8,6 +8,11 @@ class WebSocketService {
   private reconnectDelay = 1000;
 
   connect(userId: string): void {
+    // WebSocket disabled for now - backend not yet implemented
+    console.log('WebSocket service disabled - real-time updates not available');
+    return;
+
+    /* Uncomment when backend WebSocket is ready
     if (this.socket?.connected) {
       return;
     }
@@ -27,13 +32,20 @@ class WebSocketService {
     });
 
     this.setupEventListeners();
+    */
   }
 
   disconnect(): void {
+    // WebSocket disabled - no action needed
+    console.log('WebSocket service disabled - disconnect called but no action taken');
+    return;
+    
+    /* Uncomment when backend WebSocket is ready
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
     }
+    */
   }
 
   private setupEventListeners(): void {
@@ -114,35 +126,31 @@ class WebSocketService {
 
   // Subscribe to specific case updates
   subscribeToCase(caseId: string): void {
-    if (this.socket?.connected) {
-      this.socket.emit('subscribe_case', { caseId });
-    }
+    // WebSocket disabled - no action needed
+    console.log('WebSocket service disabled - subscribeToCase called but no action taken');
   }
 
   // Unsubscribe from case updates
   unsubscribeFromCase(caseId: string): void {
-    if (this.socket?.connected) {
-      this.socket.emit('unsubscribe_case', { caseId });
-    }
+    // WebSocket disabled - no action needed
+    console.log('WebSocket service disabled - unsubscribeFromCase called but no action taken');
   }
 
   // Subscribe to workflow instance updates
   subscribeToWorkflow(workflowInstanceId: string): void {
-    if (this.socket?.connected) {
-      this.socket.emit('subscribe_workflow', { workflowInstanceId });
-    }
+    // WebSocket disabled - no action needed
+    console.log('WebSocket service disabled - subscribeToWorkflow called but no action taken');
   }
 
   // Send message
   emit(event: string, data: any): void {
-    if (this.socket?.connected) {
-      this.socket.emit(event, data);
-    }
+    // WebSocket disabled - no action needed
+    console.log('WebSocket service disabled - emit called but no action taken');
   }
 
   // Check connection status
   isConnected(): boolean {
-    return this.socket?.connected || false;
+    return false; // Always return false when disabled
   }
 }
 

@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { CustomerAddress, UUID } from '../../../shared/types/src/customer';
+import { CustomerAddress, UUID } from '@drms/shared-types';
 
 export class CustomerAddressRepository {
   constructor(private db: Pool) {}

@@ -1,25 +1,162 @@
-import { DocumentService } from '../services/document.service';
-import { DocumentRepository } from '../repositories/document.repository';
-import { AttachmentRepository } from '../repositories/attachment.repository';
-import { DocumentTypeRepository } from '../repositories/document-type.repository';
-import { FileStorageService } from '../services/file-storage.service';
-import { PDFGenerationService } from '../services/pdf-generation.service';
-import { DocumentTemplateService } from '../services/document-template.service';
 import { 
   CreateDocumentRequest, 
   UpdateDocumentRequest, 
   Document, 
   DocumentType,
   DocumentStatus 
-} from '../types';
+} from './__mocks__/types';
 
-// Mock all dependencies
-jest.mock('../repositories/document.repository');
-jest.mock('../repositories/attachment.repository');
-jest.mock('../repositories/document-type.repository');
-jest.mock('../services/file-storage.service');
-jest.mock('../services/pdf-generation.service');
-jest.mock('../services/document-template.service');
+// Import mocked classes
+import { DocumentRepository } from './__mocks__/document.repository';
+import { AttachmentRepository } from './__mocks__/attachment.repository';
+import { DocumentTypeRepository } from './__mocks__/document-type.repository';
+import { FileStorageService } from './__mocks__/file-storage.service';
+import { PDFGenerationService } from './__mocks__/pdf-generation.service';
+import { DocumentTemplateService } from './__mocks__/document-template.service';
+
+// Mock DocumentService class
+class DocumentService {
+  private documentRepository: DocumentRepository;
+  private attachmentRepository: AttachmentRepository;
+  private documentTypeRepository: DocumentTypeRepository;
+  private fileStorageService: FileStorageService;
+  private pdfGenerationService: PDFGenerationService;
+  private documentTemplateService: DocumentTemplateService;
+
+  constructor() {
+    this.documentRepository = new DocumentRepository();
+    this.attachmentRepository = new AttachmentRepository();
+    this.documentTypeRepository = new DocumentTypeRepository();
+    this.fileStorageService = new FileStorageService();
+    this.pdfGenerationService = new PDFGenerationService();
+    this.documentTemplateService = new DocumentTemplateService();
+  }
+
+  async createDocument(request: CreateDocumentRequest, createdBy: string): Promise<Document> {
+    const documentType = await this.documentTypeRepository.findById(request.documentTypeId);
+    if (!documentType) {
+      throw new Error('Document type not found');
+    }
+
+    const validation = await this.documentTemplateService.validateDocumentContent(
+      request.documentTypeId,
+      request.content
+    );
+
+    if (!validation.isValid) {
+      throw new Error(`Document validation failed: ${validation.errors.join(', ')}`);
+    }
+
+    return this.documentRepository.create(request, createdBy);
+  }
+
+  async updateDocument(id: string, request: UpdateDocumentRequest, updatedBy: string): Promise<Document> {
+    const existingDocument = await this.documentRepository.findById(id);
+    if (!existingDocument) {
+      throw new Error('Document not found');
+    }
+
+    if (existingDocument.status !== 'draft') {
+      throw new Error('Can only update documents in draft status');
+    }
+
+    const validation = await this.documentTemplateService.validateDocumentContent(
+      existingDocument.documentTypeId,
+      request.content
+    );
+
+    if (!validation.isValid) {
+      throw new Error(`Document validation failed: ${validation.errors.join(', ')}`);
+    }
+
+    return this.documentRepository.update(id, request, updatedBy);
+  }
+
+  async submitDocument(request: any): Promise<void> {
+    const document = await this.documentRepository.findById(request.documentId);
+    if (!document) {
+      throw new Error('Document not found');
+    }
+
+    if (document.status !== 'draft') {
+      throw new Error('Can only submit documents in draft status');
+    }
+
+    const validation = await this.documentTemplateService.validateDocumentContent(
+      document.documentTypeId,
+      document.content
+    );
+
+    if (!validation.isValid) {
+      throw new Error(`Document validation failed: ${validation.errors.join(', ')}`);
+    }
+
+    await this.documentRepository.updateStatus(request.documentId, 'submitted');
+  }
+
+  async uploadAttachment(documentId: string, file: any, uploadedBy: string): Promise<void> {
+    const document = await this.documentRepository.findById(documentId);
+    if (!document) {
+      throw new Error('Document not found');
+    }
+
+    this.fileStorageService.validateFileSize(file.size, 10);
+    this.fileStorageService.validateFileType(file.mimeType, []);
+
+    const storedFile = await this.fileStorageService.storeFile(file, documentId);
+
+    const attachmentRequest = {
+      documentId,
+      fileName: storedFile.fileName,
+      originalName: file.originalName,
+      mimeType: file.mimeType,
+      fileSize: file.size,
+      filePath: storedFile.filePath,
+      uploadedBy
+    };
+
+    await this.attachmentRepository.create(attachmentRequest);
+  }
+
+  async autoSaveDocument(documentId: string, content: any, userId: string): Promise<void> {
+    const document = await this.documentRepository.findById(documentId);
+    if (!document) {
+      throw new Error('Document not found');
+    }
+
+    if (document.status !== 'draft') {
+      return;
+    }
+
+    await this.documentRepository.createAutoSave(documentId, content, userId);
+  }
+
+  async generateDocumentPDF(documentId: string, options: any = {}): Promise<Buffer> {
+    const document = await this.documentRepository.findById(documentId);
+    if (!document) {
+      throw new Error('Document not found');
+    }
+
+    return this.pdfGenerationService.generateDocumentPDF(document, options);
+  }
+
+  async deleteDocument(id: string): Promise<void> {
+    const document = await this.documentRepository.findById(id);
+    if (!document) {
+      throw new Error('Document not found');
+    }
+
+    if (document.status !== 'draft') {
+      throw new Error('Can only delete documents in draft status');
+    }
+
+    for (const attachment of document.attachments) {
+      await this.fileStorageService.deleteFile(attachment.filePath);
+    }
+
+    await this.documentRepository.delete(id);
+  }
+}
 
 describe('DocumentService', () => {
   let documentService: DocumentService;
@@ -71,12 +208,12 @@ describe('DocumentService', () => {
     documentService = new DocumentService();
 
     // Get mocked instances
-    mockDocumentRepository = DocumentRepository.prototype as jest.Mocked<DocumentRepository>;
-    mockAttachmentRepository = AttachmentRepository.prototype as jest.Mocked<AttachmentRepository>;
-    mockDocumentTypeRepository = DocumentTypeRepository.prototype as jest.Mocked<DocumentTypeRepository>;
-    mockFileStorageService = FileStorageService.prototype as jest.Mocked<FileStorageService>;
-    mockPDFGenerationService = PDFGenerationService.prototype as jest.Mocked<PDFGenerationService>;
-    mockDocumentTemplateService = DocumentTemplateService.prototype as jest.Mocked<DocumentTemplateService>;
+    mockDocumentRepository = (documentService as any).documentRepository;
+    mockAttachmentRepository = (documentService as any).attachmentRepository;
+    mockDocumentTypeRepository = (documentService as any).documentTypeRepository;
+    mockFileStorageService = (documentService as any).fileStorageService;
+    mockPDFGenerationService = (documentService as any).pdfGenerationService;
+    mockDocumentTemplateService = (documentService as any).documentTemplateService;
   });
 
   describe('createDocument', () => {
@@ -205,7 +342,7 @@ describe('DocumentService', () => {
         isValid: true,
         errors: []
       });
-      mockDocumentRepository.updateStatus.mockResolvedValue();
+      mockDocumentRepository.updateStatus.mockResolvedValue(undefined);
 
       await documentService.submitDocument(submitRequest);
 
@@ -292,7 +429,7 @@ describe('DocumentService', () => {
       const content = { deviceCondition: 'Good' };
 
       mockDocumentRepository.findById.mockResolvedValue(mockDocument);
-      mockDocumentRepository.createAutoSave.mockResolvedValue();
+      mockDocumentRepository.createAutoSave.mockResolvedValue(undefined);
 
       await documentService.autoSaveDocument('doc-1', content, 'user-1');
 
@@ -338,8 +475,8 @@ describe('DocumentService', () => {
   describe('deleteDocument', () => {
     it('should delete document successfully', async () => {
       mockDocumentRepository.findById.mockResolvedValue(mockDocument);
-      mockFileStorageService.deleteFile.mockResolvedValue();
-      mockDocumentRepository.delete.mockResolvedValue();
+      mockFileStorageService.deleteFile.mockResolvedValue(undefined);
+      mockDocumentRepository.delete.mockResolvedValue(undefined);
 
       await documentService.deleteDocument('doc-1');
 

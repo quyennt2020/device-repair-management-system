@@ -18,7 +18,7 @@ export const createCaseTables: Migration = {
         current_step_id VARCHAR(100),
         status VARCHAR(50) NOT NULL,
         priority VARCHAR(20) DEFAULT 'medium',
-        assigned_technician_id UUID REFERENCES technicians(id),
+        assigned_technician_id UUID, /* FK added in migration 020 after technicians table exists */
         sla_id UUID,
         description TEXT,
         requested_by UUID NOT NULL,

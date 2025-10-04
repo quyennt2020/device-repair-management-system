@@ -10,6 +10,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 
 // Components
 import ProtectedRoute from './components/common/ProtectedRoute';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
 
 // Pages
@@ -18,6 +19,41 @@ import DashboardPage from './pages/dashboard/DashboardPage';
 import UnauthorizedPage from './pages/common/UnauthorizedPage';
 import NotFoundPage from './pages/common/NotFoundPage';
 import SpecializedComponentsDemo from './pages/demo/SpecializedComponentsDemo';
+import CasesPage from './pages/cases/CasesPage';
+import CreateCasePage from './pages/cases/CreateCasePage';
+import CaseDetailsPage from './pages/cases/CaseDetailsPage';
+import CustomersPage from './pages/customers/CustomersPage';
+import CreateCustomerPage from './pages/customers/CreateCustomerPage';
+import EditCustomerPage from './pages/customers/EditCustomerPage';
+import CustomerDetailsPage from './pages/customers/CustomerDetailsPage';
+import DevicesPage from './pages/devices/DevicesPage';
+import CreateDevicePage from './pages/devices/CreateDevicePage';
+import EditDevicePage from './pages/devices/EditDevicePage';
+import DeviceDetailsPage from './pages/devices/DeviceDetailsPage';
+import DocumentsPage from './pages/documents/DocumentsPage';
+import DocumentDetailsPage from './pages/documents/DocumentDetailsPage';
+import DocumentTemplatesPage from './pages/documents/DocumentTemplatesPage';
+import DocumentTemplateDetailsPage from './pages/documents/DocumentTemplateDetailsPage';
+import EditDocumentTemplatePage from './pages/documents/EditDocumentTemplatePage';
+import InventoryPage from './pages/inventory/InventoryPage';
+import CreateSparePartPage from './pages/inventory/CreateSparePartPage';
+import EditSparePartPage from './pages/inventory/EditSparePartPage';
+import SparePartDetailsPage from './pages/inventory/SparePartDetailsPage';
+import StockTransactionPage from './pages/inventory/StockTransactionPage';
+import LowStockAlertsPage from './pages/inventory/LowStockAlertsPage';
+import CreateWarehousePage from './pages/inventory/CreateWarehousePage';
+import TechniciansPage from './pages/technicians/TechniciansPage';
+import CreateTechnicianPage from './pages/technicians/CreateTechnicianPage';
+import EditTechnicianPage from './pages/technicians/EditTechnicianPage';
+import TechnicianDetailsPage from './pages/technicians/TechnicianDetailsPage';
+import ToolsPage from './pages/tools/ToolsPage';
+import CreateToolPage from './pages/tools/CreateToolPage';
+import EditToolPage from './pages/tools/EditToolPage';
+import ToolDetailPage from './pages/tools/ToolDetailPage';
+import ContractsPage from './pages/contracts/ContractsPage';
+import CreateContractPage from './pages/contracts/CreateContractPage';
+import ChecklistManagementPage from './pages/checklists/ChecklistManagementPage';
+import ChecklistEditorPage from './pages/checklists/ChecklistEditorPage';
 
 // Create theme
 const theme = createTheme({
@@ -94,13 +130,14 @@ const queryClient = new QueryClient({
 
 const App: React.FC = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <AuthProvider>
-          <NotificationProvider>
-            <Router>
-              <Routes>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <AuthProvider>
+            <NotificationProvider>
+              <Router>
+                <Routes>
                 {/* Public routes */}
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/unauthorized" element={<UnauthorizedPage />} />
@@ -130,7 +167,7 @@ const App: React.FC = () => {
                     path="cases"
                     element={
                       <ProtectedRoute requiredPermission={{ resource: 'cases', action: 'read' }}>
-                        <div>Cases Page - Coming Soon</div>
+                        <CasesPage />
                       </ProtectedRoute>
                     }
                   />
@@ -138,7 +175,7 @@ const App: React.FC = () => {
                     path="cases/create"
                     element={
                       <ProtectedRoute requiredPermission={{ resource: 'cases', action: 'create' }}>
-                        <div>Create Case Page - Coming Soon</div>
+                        <CreateCasePage />
                       </ProtectedRoute>
                     }
                   />
@@ -154,7 +191,7 @@ const App: React.FC = () => {
                     path="cases/:id"
                     element={
                       <ProtectedRoute requiredPermission={{ resource: 'cases', action: 'read' }}>
-                        <div>Case Details Page - Coming Soon</div>
+                        <CaseDetailsPage />
                       </ProtectedRoute>
                     }
                   />
@@ -164,15 +201,24 @@ const App: React.FC = () => {
                     path="documents"
                     element={
                       <ProtectedRoute requiredPermission={{ resource: 'documents', action: 'read' }}>
-                        <div>Documents Page - Coming Soon</div>
+                        <DocumentsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Specific document routes BEFORE :id route */}
+                  <Route
+                    path="documents/pending"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'documents', action: 'read' }}>
+                        <DocumentsPage />
                       </ProtectedRoute>
                     }
                   />
                   <Route
-                    path="documents/pending"
+                    path="documents/create"
                     element={
-                      <ProtectedRoute requiredPermission={{ resource: 'documents', action: 'approve' }}>
-                        <div>Pending Documents Page - Coming Soon</div>
+                      <ProtectedRoute requiredPermission={{ resource: 'documents', action: 'create' }}>
+                        <DocumentsPage />
                       </ProtectedRoute>
                     }
                   />
@@ -180,17 +226,84 @@ const App: React.FC = () => {
                     path="documents/templates"
                     element={
                       <ProtectedRoute requiredPermission={{ resource: 'document_templates', action: 'read' }}>
-                        <div>Document Templates Page - Coming Soon</div>
+                        <DocumentTemplatesPage />
                       </ProtectedRoute>
                     }
                   />
-                  
+                  <Route
+                    path="documents/templates/:id/edit"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'document_templates', action: 'update' }}>
+                        <EditDocumentTemplatePage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="documents/templates/:id"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'document_templates', action: 'read' }}>
+                        <DocumentTemplateDetailsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  {/* Dynamic :id route LAST */}
+                  <Route
+                    path="documents/:id"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'documents', action: 'read' }}>
+                        <DocumentDetailsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Checklists */}
+                  <Route
+                    path="checklists"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'documents', action: 'read' }}>
+                        <ChecklistManagementPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="checklists/edit/:documentType/:deviceId/:checklistType"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'documents', action: 'update' }}>
+                        <ChecklistEditorPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
                   {/* Customers */}
                   <Route
                     path="customers"
                     element={
                       <ProtectedRoute requiredPermission={{ resource: 'customers', action: 'read' }}>
-                        <div>Customers Page - Coming Soon</div>
+                        <CustomersPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="customers/create"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'customers', action: 'create' }}>
+                        <CreateCustomerPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="customers/:id"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'customers', action: 'read' }}>
+                        <CustomerDetailsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="customers/:id/edit"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'customers', action: 'update' }}>
+                        <EditCustomerPage />
                       </ProtectedRoute>
                     }
                   />
@@ -200,7 +313,31 @@ const App: React.FC = () => {
                     path="devices"
                     element={
                       <ProtectedRoute requiredPermission={{ resource: 'devices', action: 'read' }}>
-                        <div>Devices Page - Coming Soon</div>
+                        <DevicesPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="devices/create"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'devices', action: 'create' }}>
+                        <CreateDevicePage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="devices/:id"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'devices', action: 'read' }}>
+                        <DeviceDetailsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="devices/:id/edit"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'devices', action: 'update' }}>
+                        <EditDevicePage />
                       </ProtectedRoute>
                     }
                   />
@@ -210,35 +347,131 @@ const App: React.FC = () => {
                     path="technicians"
                     element={
                       <ProtectedRoute requiredPermission={{ resource: 'technicians', action: 'read' }}>
-                        <div>Technicians Page - Coming Soon</div>
+                        <TechniciansPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="technicians/create"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'technicians', action: 'create' }}>
+                        <CreateTechnicianPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="technicians/:id"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'technicians', action: 'read' }}>
+                        <TechnicianDetailsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="technicians/:id/edit"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'technicians', action: 'update' }}>
+                        <EditTechnicianPage />
                       </ProtectedRoute>
                     }
                   />
                   
                   {/* Inventory */}
                   <Route
+                    path="inventory"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'inventory', action: 'read' }}>
+                        <InventoryPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="inventory/spare-parts/create"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'inventory', action: 'create' }}>
+                        <CreateSparePartPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="inventory/spare-parts/:id"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'inventory', action: 'read' }}>
+                        <SparePartDetailsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="inventory/spare-parts/:id/edit"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'inventory', action: 'update' }}>
+                        <EditSparePartPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
                     path="inventory/parts"
                     element={
                       <ProtectedRoute requiredPermission={{ resource: 'inventory', action: 'read' }}>
-                        <div>Inventory Parts Page - Coming Soon</div>
+                        <InventoryPage />
                       </ProtectedRoute>
                     }
                   />
                   <Route
                     path="inventory/transactions"
                     element={
-                      <ProtectedRoute requiredPermission={{ resource: 'inventory', action: 'read' }}>
-                        <div>Inventory Transactions Page - Coming Soon</div>
+                      <ProtectedRoute requiredPermission={{ resource: 'inventory', action: 'create' }}>
+                        <StockTransactionPage />
                       </ProtectedRoute>
                     }
                   />
-                  
+                  <Route
+                    path="inventory/alerts"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'inventory', action: 'read' }}>
+                        <LowStockAlertsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="inventory/warehouses/create"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'inventory', action: 'create' }}>
+                        <CreateWarehousePage />
+                      </ProtectedRoute>
+                    }
+                  />
+
                   {/* Tools */}
                   <Route
                     path="tools"
                     element={
                       <ProtectedRoute requiredPermission={{ resource: 'tools', action: 'read' }}>
-                        <div>Service Tools Page - Coming Soon</div>
+                        <ToolsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="tools/create"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'tools', action: 'create' }}>
+                        <CreateToolPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="tools/:id"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'tools', action: 'read' }}>
+                        <ToolDetailPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="tools/:id/edit"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'tools', action: 'update' }}>
+                        <EditToolPage />
                       </ProtectedRoute>
                     }
                   />
@@ -248,7 +481,15 @@ const App: React.FC = () => {
                     path="contracts"
                     element={
                       <ProtectedRoute requiredPermission={{ resource: 'contracts', action: 'read' }}>
-                        <div>Contracts & SLA Page - Coming Soon</div>
+                        <ContractsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="contracts/create"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'contracts', action: 'create' }}>
+                        <CreateContractPage />
                       </ProtectedRoute>
                     }
                   />
@@ -327,12 +568,13 @@ const App: React.FC = () => {
                 
                 {/* 404 Not Found */}
                 <Route path="*" element={<NotFoundPage />} />
-              </Routes>
-            </Router>
-          </NotificationProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+                </Routes>
+              </Router>
+            </NotificationProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

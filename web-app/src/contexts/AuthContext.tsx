@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { AuthState, AuthContextType, LoginCredentials, User } from '../types/auth';
 import { apiService } from '../services/api';
-import { webSocketService } from '../services/websocket';
+// WebSocket temporarily disabled until backend is ready
+// import { webSocketService } from '../services/websocket';
 
 interface AuthAction {
   type: 'LOGIN_START' | 'LOGIN_SUCCESS' | 'LOGIN_FAILURE' | 'LOGOUT' | 'RESTORE_SESSION';
@@ -131,7 +132,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         
         // Connect to WebSocket (only if not in demo mode)
         try {
-          webSocketService.connect(user.id);
+          // Temporarily disable WebSocket connection
+          // webSocketService.connect(user.id);
         } catch (error) {
           console.warn('WebSocket connection failed (this is expected in demo mode):', error);
         }
@@ -205,7 +207,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
       
-      const response = await apiService.post<{ user: User; token: string }>('/auth/login', credentials);
+      const response = await apiService.post<{ user: User; token: string }>('/api/auth/login', credentials);
       
       if (response.success && response.data) {
         const { user, token } = response.data;
@@ -219,12 +221,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
           payload: { user, token }
         });
         
-        // Connect to WebSocket
-        try {
-          webSocketService.connect(user.id);
-        } catch (error) {
-          console.warn('WebSocket connection failed:', error);
-        }
+        // Connect to WebSocket (disabled until backend is ready)
+        // try {
+        //   webSocketService.connect(user.id);
+        // } catch (error) {
+        //   console.warn('WebSocket connection failed:', error);
+        // }
       } else {
         throw new Error(response.message || 'Login failed');
       }
@@ -235,12 +237,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const logout = (): void => {
-    // Disconnect WebSocket (only if not in demo mode)
-    try {
-      webSocketService.disconnect();
-    } catch (error) {
-      console.warn('WebSocket disconnect failed (this is expected in demo mode):', error);
-    }
+    // Disconnect WebSocket (disabled until backend is ready)
+    // try {
+    //   webSocketService.disconnect();
+    // } catch (error) {
+    //   console.warn('WebSocket disconnect failed (this is expected in demo mode):', error);
+    // }
     
     // Clear localStorage
     localStorage.removeItem('auth_token');

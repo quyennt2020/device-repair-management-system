@@ -9,8 +9,10 @@ services:
       POSTGRES_DB: device_repair_db
       POSTGRES_USER: drms_user
       POSTGRES_PASSWORD: drms_password
+      POSTGRES_HOST_AUTH_METHOD: md5
+      POSTGRES_INITDB_ARGS: "--auth-host=md5 --auth=md5"
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./shared/database/init:/docker-entrypoint-initdb.d

@@ -1,5 +1,3 @@
-import { table } from 'console';
-import { table } from 'console';
 import { Migration } from '../src/migrations';
 
 export const createDocumentTables: Migration = {
@@ -68,7 +66,7 @@ export const createDocumentTables: Migration = {
       );
     `);
 
-    -- Auto-save table for draft functionality
+    // Auto-save table for draft functionality
     await client.query(`
       CREATE TABLE document_auto_saves (
         document_id UUID PRIMARY KEY REFERENCES documents(id),

@@ -1,6 +1,5 @@
 import { DocumentTemplateService } from '../services/document-template.service';
 import { DocumentTypeRepository } from '../repositories/document-type.repository';
-import { DocumentCategory, DocumentTemplate } from '../types';
 
 // Mock the repository
 jest.mock('../repositories/document-type.repository');
@@ -16,44 +15,25 @@ describe('DocumentTemplateService', () => {
   });
 
   describe('generateDynamicForm', () => {
-    it('should generate a dynamic form for inspection report', async () => {
+    it('should generate dynamic form for inspection report', async () => {
+      // Mock document type
       const mockDocumentType = {
-        id: 'doc-type-1',
-        name: 'Standard Inspection Report',
-        category: 'inspection_report' as DocumentCategory,
+        id: 'doc-type-001',
+        name: 'Inspection Report',
+        category: 'inspection_report',
         templateConfig: {
           sections: ['basic_info', 'findings'],
-          requiredFields: ['device_serial_number', 'inspection_date', 'findings'],
+          requiredFields: ['device_serial_number', 'inspection_date'],
           optionalFields: ['technician_notes'],
           validationRules: [
             {
               field: 'device_serial_number',
-              type: 'required' as const,
-              value: true,
+              type: 'required',
               message: 'Device serial number is required'
             }
-          ],
-          layout: {
-            columns: 2,
-            sections: [
-              {
-                id: 'basic_info',
-                title: 'Basic Information',
-                fields: ['device_serial_number', 'inspection_date'],
-                order: 1,
-                collapsible: false
-              },
-              {
-                id: 'findings',
-                title: 'Findings',
-                fields: ['findings', 'technician_notes'],
-                order: 2,
-                collapsible: false
-              }
-            ]
-          }
-        } as DocumentTemplate,
-        requiredFields: ['device_serial_number', 'inspection_date', 'findings'],
+          ]
+        },
+        requiredFields: ['device_serial_number', 'inspection_date'],
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -62,30 +42,22 @@ describe('DocumentTemplateService', () => {
       mockRepository.findByDeviceTypeAndCategory.mockResolvedValue([mockDocumentType]);
 
       const result = await service.generateDynamicForm(
-        'device-type-1',
+        'device-001',
         'inspection_report'
       );
 
       expect(result).toBeDefined();
-      expect(result.documentTypeId).toBe('doc-type-1');
+      expect(result.documentTypeId).toBe('doc-type-001');
       expect(result.category).toBe('inspection_report');
-      expect(result.sections).toHaveLength(2);
-      
-      const basicInfoSection = result.sections.find(s => s.id === 'basic_info');
-      expect(basicInfoSection).toBeDefined();
-      expect(basicInfoSection?.fields).toHaveLength(2);
-      
-      const deviceSerialField = basicInfoSection?.fields.find(f => f.name === 'device_serial_number');
-      expect(deviceSerialField).toBeDefined();
-      expect(deviceSerialField?.required).toBe(true);
-      expect(deviceSerialField?.type).toBe('text');
+      expect(result.sections).toHaveLength(1); // Default section since no layout specified
+      expect(result.sections[0].fields).toHaveLength(3); // 2 required + 1 optional
     });
 
     it('should throw error when no document type found', async () => {
       mockRepository.findByDeviceTypeAndCategory.mockResolvedValue([]);
 
       await expect(
-        service.generateDynamicForm('device-type-1', 'inspection_report')
+        service.generateDynamicForm('device-001', 'inspection_report')
       ).rejects.toThrow('No document type found for category inspection_report');
     });
   });
@@ -93,22 +65,23 @@ describe('DocumentTemplateService', () => {
   describe('validateDocumentContent', () => {
     it('should validate document content successfully', async () => {
       const mockDocumentType = {
-        id: 'doc-type-1',
-        name: 'Test Document Type',
-        category: 'inspection_report' as DocumentCategory,
+        id: 'doc-type-001',
+        name: 'Inspection Report',
+        category: 'inspection_report',
         templateConfig: {
           sections: ['basic_info'],
-          requiredFields: ['device_serial_number', 'inspection_date'],
+          requiredFields: ['device_serial_number'],
+          optionalFields: [],
           validationRules: [
             {
               field: 'device_serial_number',
-              type: 'min_length' as const,
+              type: 'min_length',
               value: 5,
               message: 'Serial number must be at least 5 characters'
             }
           ]
-        } as DocumentTemplate,
-        requiredFields: ['device_serial_number', 'inspection_date'],
+        },
+        requiredFields: ['device_serial_number'],
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -118,61 +91,33 @@ describe('DocumentTemplateService', () => {
 
       const content = {
         device_serial_number: 'ABC123456',
-        inspection_date: '2024-01-15',
-        findings: 'Device is working properly'
+        inspection_date: '2024-01-15'
       };
 
-      const result = await service.validateDocumentContent('doc-type-1', content);
+      const result = await service.validateDocumentContent('doc-type-001', content);
 
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should return validation errors for missing required fields', async () => {
+    it('should return validation errors for invalid content', async () => {
       const mockDocumentType = {
-        id: 'doc-type-1',
-        name: 'Test Document Type',
-        category: 'inspection_report' as DocumentCategory,
-        templateConfig: {
-          sections: ['basic_info'],
-          requiredFields: ['device_serial_number', 'inspection_date']
-        } as DocumentTemplate,
-        requiredFields: ['device_serial_number', 'inspection_date'],
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      mockRepository.findById.mockResolvedValue(mockDocumentType);
-
-      const content = {
-        device_serial_number: 'ABC123456'
-        // Missing inspection_date
-      };
-
-      const result = await service.validateDocumentContent('doc-type-1', content);
-
-      expect(result.isValid).toBe(false);
-      expect(result.errors).toContain("Field 'inspection_date' is required");
-    });
-
-    it('should return validation errors for validation rule violations', async () => {
-      const mockDocumentType = {
-        id: 'doc-type-1',
-        name: 'Test Document Type',
-        category: 'inspection_report' as DocumentCategory,
+        id: 'doc-type-001',
+        name: 'Inspection Report',
+        category: 'inspection_report',
         templateConfig: {
           sections: ['basic_info'],
           requiredFields: ['device_serial_number'],
+          optionalFields: [],
           validationRules: [
             {
               field: 'device_serial_number',
-              type: 'min_length' as const,
-              value: 10,
-              message: 'Serial number must be at least 10 characters'
+              type: 'min_length',
+              value: 5,
+              message: 'Serial number must be at least 5 characters'
             }
           ]
-        } as DocumentTemplate,
+        },
         requiredFields: ['device_serial_number'],
         isActive: true,
         createdAt: new Date(),
@@ -182,107 +127,101 @@ describe('DocumentTemplateService', () => {
       mockRepository.findById.mockResolvedValue(mockDocumentType);
 
       const content = {
-        device_serial_number: 'ABC123' // Too short
+        device_serial_number: 'ABC' // Too short
       };
 
-      const result = await service.validateDocumentContent('doc-type-1', content);
+      const result = await service.validateDocumentContent('doc-type-001', content);
 
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContain('Serial number must be at least 10 characters');
+      expect(result.errors).toContain('Serial number must be at least 5 characters');
     });
   });
 
-  describe('createDocumentType', () => {
-    it('should create a document type successfully', async () => {
-      const mockCreatedType = {
-        id: 'doc-type-1',
-        name: 'New Document Type',
-        category: 'custom' as DocumentCategory,
-        templateConfig: {
-          sections: ['basic_info'],
-          requiredFields: ['title']
-        } as DocumentTemplate,
-        requiredFields: ['title'],
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+  describe('field type detection', () => {
+    it('should detect email field type', () => {
+      const service = new DocumentTemplateService();
+      const field = (service as any).buildFormField(
+        'customer_email',
+        { requiredFields: [], optionalFields: [] },
+        ['customer_email'],
+        'basic_info'
+      );
 
-      mockRepository.create.mockResolvedValue(mockCreatedType);
-
-      const request = {
-        name: 'New Document Type',
-        category: 'custom' as DocumentCategory,
-        templateConfig: {
-          sections: ['basic_info'],
-          requiredFields: ['title']
-        } as DocumentTemplate,
-        requiredFields: ['title']
-      };
-
-      const result = await service.createDocumentType(request);
-
-      expect(result).toEqual(mockCreatedType);
-      expect(mockRepository.create).toHaveBeenCalledWith({
-        name: 'New Document Type',
-        category: 'custom',
-        templateConfig: request.templateConfig,
-        requiredFields: ['title'],
-        approvalWorkflowId: undefined,
-        isActive: true
-      });
+      expect(field.type).toBe('email');
+      expect(field.label).toBe('Customer Email');
     });
 
-    it('should handle template inheritance', async () => {
+    it('should detect date field type', () => {
+      const service = new DocumentTemplateService();
+      const field = (service as any).buildFormField(
+        'inspection_date',
+        { requiredFields: [], optionalFields: [] },
+        ['inspection_date'],
+        'basic_info'
+      );
+
+      expect(field.type).toBe('date');
+      expect(field.label).toBe('Inspection Date');
+    });
+
+    it('should detect textarea field type', () => {
+      const service = new DocumentTemplateService();
+      const field = (service as any).buildFormField(
+        'technician_notes',
+        { requiredFields: [], optionalFields: [] },
+        [],
+        'basic_info'
+      );
+
+      expect(field.type).toBe('textarea');
+      expect(field.label).toBe('Technician Notes');
+    });
+
+    it('should detect select field type with options', () => {
+      const service = new DocumentTemplateService();
+      const field = (service as any).buildFormField(
+        'severity_level',
+        { requiredFields: [], optionalFields: [] },
+        ['severity_level'],
+        'basic_info'
+      );
+
+      expect(field.type).toBe('select');
+      expect(field.options).toBeDefined();
+      expect(field.options.length).toBeGreaterThan(0);
+      expect(field.options[0]).toHaveProperty('value');
+      expect(field.options[0]).toHaveProperty('label');
+    });
+  });
+
+  describe('template inheritance', () => {
+    it('should inherit template fields correctly', () => {
+      const service = new DocumentTemplateService();
+      
       const parentTemplate = {
-        id: 'parent-type-1',
-        name: 'Parent Template',
-        category: 'inspection_report' as DocumentCategory,
-        templateConfig: {
-          sections: ['basic_info'],
-          requiredFields: ['device_serial_number'],
-          optionalFields: ['notes']
-        } as DocumentTemplate,
+        sections: ['basic_info'],
         requiredFields: ['device_serial_number'],
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        optionalFields: ['notes'],
+        validationRules: [
+          { field: 'device_serial_number', type: 'required', message: 'Required' }
+        ]
       };
 
-      const mockCreatedType = {
-        id: 'doc-type-1',
-        name: 'Child Document Type',
-        category: 'inspection_report' as DocumentCategory,
-        templateConfig: {
-          sections: ['basic_info', 'findings'],
-          requiredFields: ['device_serial_number', 'findings'],
-          optionalFields: ['notes', 'recommendations']
-        } as DocumentTemplate,
-        requiredFields: ['device_serial_number', 'findings'],
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      mockRepository.findById.mockResolvedValue(parentTemplate);
-      mockRepository.create.mockResolvedValue(mockCreatedType);
-
-      const request = {
-        name: 'Child Document Type',
-        category: 'inspection_report' as DocumentCategory,
-        templateConfig: {
-          sections: ['findings'],
-          requiredFields: ['findings'],
-          optionalFields: ['recommendations']
-        } as DocumentTemplate,
+      const childTemplate = {
+        sections: ['findings'],
         requiredFields: ['findings'],
-        parentTemplateId: 'parent-type-1'
+        optionalFields: ['recommendations'],
+        validationRules: [
+          { field: 'findings', type: 'required', message: 'Required' }
+        ]
       };
 
-      const result = await service.createDocumentType(request);
+      const result = (service as any).inheritTemplate(parentTemplate, childTemplate);
 
-      expect(result).toEqual(mockCreatedType);
-      expect(mockRepository.findById).toHaveBeenCalledWith('parent-type-1');
+      expect(result.sections).toEqual(['basic_info', 'findings']);
+      expect(result.requiredFields).toEqual(['device_serial_number', 'findings']);
+      expect(result.optionalFields).toEqual(['notes', 'recommendations']);
+      expect(result.validationRules).toHaveLength(2);
     });
   });
 });

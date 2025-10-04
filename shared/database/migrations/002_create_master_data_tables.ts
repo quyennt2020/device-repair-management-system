@@ -64,44 +64,20 @@ export const createMasterDataTables: Migration = {
       );
     `);
 
-    // Technicians
-    await client.query(`
-      CREATE TABLE technicians (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        employee_code VARCHAR(50) UNIQUE NOT NULL,
-        user_id UUID NOT NULL,
-        personal_info JSONB NOT NULL,
-        employment_info JSONB NOT NULL,
-        skills JSONB NOT NULL,
-        certifications JSONB DEFAULT '[]',
-        schedule_info JSONB NOT NULL,
-        performance_metrics JSONB DEFAULT '{}',
-        max_concurrent_cases INTEGER DEFAULT 5,
-        status VARCHAR(20) DEFAULT 'active',
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
-
     // Create indexes
     await client.query(`
       CREATE INDEX idx_customers_code ON customers(customer_code);
       CREATE INDEX idx_customers_type ON customers(customer_type);
       CREATE INDEX idx_customers_status ON customers(status);
-      
+
       CREATE INDEX idx_devices_customer_id ON devices(customer_id);
       CREATE INDEX idx_devices_type_id ON devices(device_type_id);
       CREATE INDEX idx_devices_serial ON devices(serial_number);
       CREATE INDEX idx_devices_status ON devices(status);
-      
-      CREATE INDEX idx_technicians_employee_code ON technicians(employee_code);
-      CREATE INDEX idx_technicians_user_id ON technicians(user_id);
-      CREATE INDEX idx_technicians_status ON technicians(status);
     `);
   },
 
   async down(client) {
-    await client.query('DROP TABLE IF EXISTS technicians CASCADE;');
     await client.query('DROP TABLE IF EXISTS devices CASCADE;');
     await client.query('DROP TABLE IF EXISTS device_types CASCADE;');
     await client.query('DROP TABLE IF EXISTS customers CASCADE;');

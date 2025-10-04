@@ -8,8 +8,14 @@ import { documentTypeRoutes } from './routes/document-type.routes';
 import { documentTemplateRoutes } from './routes/document-template.routes';
 import { documentRoutes } from './routes/document.routes';
 import approvalWorkflowRoutes from './routes/approval-workflow.routes';
+import inspectionReportRoutes from './routes/inspection-report.routes';
+import { createQuotationRoutes } from './routes/quotation.routes';
+import { createRepairReportRoutes } from './routes/repair-report.routes';
+import maintenanceReportRoutes from './routes/maintenance-report.routes';
+import maintenanceChecklistTemplateRoutes from './routes/maintenance-checklist-template.routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 import { ApprovalScheduledJobsService } from './services/approval-scheduled-jobs.service';
+import { getDbConnection } from '../../../shared/database/src/connection';
 
 dotenv.config();
 
@@ -36,6 +42,11 @@ app.use('/api/document-types', documentTypeRoutes);
 app.use('/api/document-templates', documentTemplateRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/approval-workflows', approvalWorkflowRoutes);
+app.use('/api/inspection-reports', inspectionReportRoutes);
+app.use('/api/quotations', createQuotationRoutes(getDbConnection()));
+app.use('/api/repair-reports', createRepairReportRoutes(getDbConnection()));
+app.use('/api/maintenance-reports', maintenanceReportRoutes);
+app.use('/api/maintenance-checklist-templates', maintenanceChecklistTemplateRoutes);
 
 // Error handling
 app.use(notFoundHandler);

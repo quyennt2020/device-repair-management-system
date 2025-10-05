@@ -46,6 +46,11 @@ import TechniciansPage from './pages/technicians/TechniciansPage';
 import CreateTechnicianPage from './pages/technicians/CreateTechnicianPage';
 import EditTechnicianPage from './pages/technicians/EditTechnicianPage';
 import TechnicianDetailsPage from './pages/technicians/TechnicianDetailsPage';
+import WorkflowsPage from './pages/workflows/WorkflowsPage';
+import WorkflowDetailsPage from './pages/workflows/WorkflowDetailsPage';
+import CreateWorkflowPage from './pages/workflows/CreateWorkflowPage';
+import EditWorkflowPage from './pages/workflows/EditWorkflowPage';
+import WorkflowDiagramPage from './pages/workflows/WorkflowDiagramPage';
 import ToolsPage from './pages/tools/ToolsPage';
 import CreateToolPage from './pages/tools/CreateToolPage';
 import EditToolPage from './pages/tools/EditToolPage';
@@ -375,7 +380,49 @@ const App: React.FC = () => {
                       </ProtectedRoute>
                     }
                   />
-                  
+
+                  {/* Workflows */}
+                  <Route
+                    path="workflows"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'workflows', action: 'read' }}>
+                        <WorkflowsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="workflows/create"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'workflows', action: 'create' }}>
+                        <CreateWorkflowPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="workflows/:id"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'workflows', action: 'read' }}>
+                        <WorkflowDetailsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="workflows/:id/edit"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'workflows', action: 'update' }}>
+                        <EditWorkflowPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="workflows/:id/diagram"
+                    element={
+                      <ProtectedRoute requiredPermission={{ resource: 'workflows', action: 'read' }}>
+                        <WorkflowDiagramPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
                   {/* Inventory */}
                   <Route
                     path="inventory"

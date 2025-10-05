@@ -89,32 +89,183 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/cases
 router.post('/', async (req, res) => {
+  const client = await req.pool.connect();
   try {
+    await client.query('BEGIN');
+
     const { case_number, customer_id, device_id, service_type, priority, description } = req.body;
-    
+
     if (!case_number || !customer_id || !device_id || !service_type) {
+      await client.query('ROLLBACK');
       return res.status(400).json({
         success: false,
         error: 'Case number, customer, device, and service type are required'
       });
     }
-    
-    const result = await req.pool.query(`
-      INSERT INTO cases (case_number, customer_id, device_id, service_type, priority, description)
-      VALUES ($1, $2, $3, $4, $5, $6)
+
+    // 1. Insert case
+    const caseResult = await client.query(`
+      INSERT INTO repair_cases (case_number, customer_id, device_id, service_type, priority, description, status)
+      VALUES ($1, $2, $3, $4, $5, $6, 'open')
       RETURNING *
     `, [case_number, customer_id, device_id, service_type, priority || 'medium', description]);
-    
+
+    const newCase = caseResult.rows[0];
+    console.log(`✅ Created case: ${newCase.case_number} (ID: ${newCase.id})`);
+
+    // 2. Get device info to find device_type
+    const deviceResult = await client.query(`
+      SELECT d.device_type_id, dt.name as device_type_name
+      FROM devices d
+      LEFT JOIN device_types dt ON d.device_type_id = dt.id
+      WHERE d.id = $1
+    `, [device_id]);
+
+    const device = deviceResult.rows[0];
+    const deviceTypeId = device?.device_type_id;
+
+    // 3. Get customer tier
+    const customerResult = await client.query(`
+      SELECT customer_tier FROM customers WHERE id = $1
+    `, [customer_id]);
+
+    const customerTier = customerResult.rows[0]?.customer_tier;
+
+    console.log(`📋 Case info - Device Type ID: ${deviceTypeId}, Customer Tier: ${customerTier}, Service Type: ${service_type}`);
+
+    // 4. Find matching workflow configuration (with priority)
+    const workflowConfigResult = await client.query(`
+      SELECT
+        wc.*,
+        wd.id as workflow_definition_id,
+        wd.name as workflow_name,
+        wd.version as workflow_version,
+        wd.config as workflow_config,
+        CASE
+          WHEN wc.device_type_id = $1 AND wc.customer_tier = $2 THEN 1
+          WHEN wc.device_type_id = $1 AND wc.customer_tier IS NULL THEN 2
+          WHEN wc.device_type_id IS NULL AND wc.customer_tier = $2 THEN 3
+          WHEN wc.device_type_id IS NULL AND wc.customer_tier IS NULL THEN 4
+          ELSE 99
+        END as match_priority
+      FROM workflow_configurations wc
+      LEFT JOIN workflow_definitions wd ON wc.workflow_definition_id = wd.id
+      WHERE wc.service_type = $3
+        AND wc.is_active = true
+        AND wd.is_active = true
+      ORDER BY match_priority ASC
+      LIMIT 1
+    `, [deviceTypeId, customerTier, service_type]);
+
+    if (workflowConfigResult.rows.length === 0) {
+      console.log(`⚠️  No workflow configuration found for service_type: ${service_type}`);
+      await client.query('COMMIT');
+      return res.status(201).json({
+        success: true,
+        data: newCase,
+        warning: 'Case created but no workflow was triggered (no matching configuration)'
+      });
+    }
+
+    const workflowConfig = workflowConfigResult.rows[0];
+    console.log(`🔧 Found workflow: ${workflowConfig.workflow_name} v${workflowConfig.workflow_version} (Priority: ${workflowConfig.match_priority})`);
+
+    // 5. Get first step from workflow definition
+    const firstStep = workflowConfig.workflow_config?.steps?.[0];
+    if (!firstStep) {
+      console.log(`⚠️  Workflow has no steps defined`);
+      await client.query('COMMIT');
+      return res.status(201).json({
+        success: true,
+        data: newCase,
+        warning: 'Case created but workflow has no steps'
+      });
+    }
+
+    console.log(`📝 First step: ${firstStep.name} (${firstStep.code})`);
+
+    // 6. Create workflow instance
+    const instanceResult = await client.query(`
+      INSERT INTO workflow_instances (
+        definition_id,
+        case_id,
+        current_step_id,
+        status,
+        variables,
+        started_at
+      ) VALUES ($1, $2, $3, 'running', '{}', NOW())
+      RETURNING *
+    `, [workflowConfig.workflow_definition_id, newCase.id, firstStep.id]);
+
+    const workflowInstance = instanceResult.rows[0];
+    console.log(`✅ Created workflow instance: ${workflowInstance.id}`);
+
+    // 7. Create initial state history entry
+    await client.query(`
+      INSERT INTO workflow_state_history (
+        instance_id,
+        from_step_id,
+        to_step_id,
+        action,
+        metadata
+      ) VALUES ($1, NULL, $2, 'start', $3)
+    `, [
+      workflowInstance.id,
+      firstStep.id,
+      JSON.stringify({
+        case_number: newCase.case_number,
+        workflow_name: workflowConfig.workflow_name,
+        started_by: 'system'
+      })
+    ]);
+
+    // 8. Calculate and insert SLA
+    const slaHoursMap = {
+      'urgent': 4,
+      'high': 24,
+      'medium': 72,
+      'low': 168
+    };
+    const slaHours = slaHoursMap[priority || 'medium'];
+    const slaDueDate = new Date(Date.now() + slaHours * 60 * 60 * 1000);
+
+    await client.query(`
+      INSERT INTO sla_compliance (
+        case_id,
+        sla_due_date,
+        is_breached,
+        warning_sent,
+        escalation_level
+      ) VALUES ($1, $2, false, false, 0)
+    `, [newCase.id, slaDueDate]);
+
+    console.log(`⏰ SLA set: ${slaHours}h (Due: ${slaDueDate.toLocaleString('vi-VN')})`);
+
+    await client.query('COMMIT');
+
     res.status(201).json({
       success: true,
-      data: result.rows[0]
+      data: newCase,
+      workflow: {
+        instance_id: workflowInstance.id,
+        workflow_name: workflowConfig.workflow_name,
+        workflow_version: workflowConfig.workflow_version,
+        current_step: firstStep.name,
+        status: 'running',
+        sla_due: slaDueDate
+      }
     });
+
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Create case error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to create case'
+      error: 'Failed to create case',
+      details: error.message
     });
+  } finally {
+    client.release();
   }
 });
 

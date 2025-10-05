@@ -22,6 +22,9 @@ COPY shared/types/package.json ./shared/types/
 COPY testing/package.json ./testing/
 COPY web-app/package.json ./web-app/
 
+# Copy shared source code
+COPY shared/ ./shared/
+
 # Install all dependencies
 RUN npm install --workspaces --legacy-peer-deps
 
@@ -35,6 +38,9 @@ COPY --from=builder /app/services/customer-service/package.json .
 
 # Copy node_modules from builder
 COPY --from=builder /app/node_modules ./node_modules
+
+# Copy shared code from builder
+COPY --from=builder /app/shared/ ./shared/
 
 # Copy source code
 COPY services/customer-service/ .

@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3001;
 // PostgreSQL connection pool
 const pool = new Pool({
   host: process.env.DATABASE_HOST || 'localhost',
-  port: parseInt(process.env.DATABASE_PORT || '5432'),
+  port: parseInt(process.env.DATABASE_PORT || '5433'),
   database: process.env.DATABASE_NAME || 'device_repair_db',
   user: process.env.DATABASE_USER || 'drms_user',
   password: process.env.DATABASE_PASSWORD || 'drms_password',
@@ -599,20 +599,24 @@ app.post('/api/cases/:caseId/documents', async (req, res) => {
 
 // Create new case
 app.post('/api/cases', async (req, res) => {
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+
     const {
       title, description, customer_id, device_id, priority, category,
       service_type, requested_by, assigned_technician_id, scheduled_date
     } = req.body;
 
     // Generate case number
-    const caseCountResult = await pool.query('SELECT COUNT(*) FROM repair_cases');
+    const caseCountResult = await client.query('SELECT COUNT(*) FROM repair_cases');
     const caseNumber = `CASE-${String(parseInt(caseCountResult.rows[0].count) + 1).padStart(3, '0')}`;
 
-    // Get current user ID from mock session (in production, this would come from JWT token)
+    // Get current user ID from mock session
     const currentUserId = requested_by || '00000000-0000-0000-0000-000000000001';
 
-    const result = await pool.query(`
+    // 1. Create case
+    const result = await client.query(`
       INSERT INTO repair_cases (
         case_number, title, description, customer_id, device_id,
         priority, category, service_type, requested_by,
@@ -634,13 +638,123 @@ app.post('/api/cases', async (req, res) => {
       scheduled_date || null
     ]);
 
+    const newCase = result.rows[0];
+    console.log(`✅ Created case: ${newCase.case_number} (ID: ${newCase.id})`);
+
+    // 2. Get device info
+    const deviceResult = await client.query(`
+      SELECT d.device_type_id, dt.name as device_type_name
+      FROM devices d
+      LEFT JOIN device_types dt ON d.device_type_id = dt.id
+      WHERE d.id = $1
+    `, [device_id]);
+
+    const device = deviceResult.rows[0];
+    const deviceTypeId = device?.device_type_id;
+
+    // 3. Get customer tier
+    const customerResult = await client.query(`
+      SELECT customer_tier FROM customers WHERE id = $1
+    `, [customer_id]);
+
+    const customerTier = customerResult.rows[0]?.customer_tier;
+
+    console.log(`📋 Device Type ID: ${deviceTypeId}, Customer Tier: ${customerTier}, Service: ${service_type || 'repair'}`);
+
+    // 4. Find workflow configuration
+    const workflowConfigResult = await client.query(`
+      SELECT
+        wc.*,
+        wd.id as workflow_definition_id,
+        wd.name as workflow_name,
+        wd.version as workflow_version,
+        wd.config as workflow_config,
+        CASE
+          WHEN wc.device_type_id = $1 AND wc.customer_tier = $2 THEN 1
+          WHEN wc.device_type_id = $1 AND wc.customer_tier IS NULL THEN 2
+          WHEN wc.device_type_id IS NULL AND wc.customer_tier = $2 THEN 3
+          WHEN wc.device_type_id IS NULL AND wc.customer_tier IS NULL THEN 4
+          ELSE 99
+        END as match_priority
+      FROM workflow_configurations wc
+      LEFT JOIN workflow_definitions wd ON wc.workflow_definition_id = wd.id
+      WHERE wc.service_type = $3
+        AND wc.is_active = true
+        AND wd.is_active = true
+      ORDER BY match_priority ASC
+      LIMIT 1
+    `, [deviceTypeId, customerTier, service_type || 'repair']);
+
+    if (workflowConfigResult.rows.length === 0) {
+      console.log(`⚠️  No workflow found for service: ${service_type || 'repair'}`);
+      await client.query('COMMIT');
+      return res.json({
+        success: true,
+        data: newCase,
+        warning: 'No workflow triggered'
+      });
+    }
+
+    const workflowConfig = workflowConfigResult.rows[0];
+    console.log(`🔧 Workflow: ${workflowConfig.workflow_name} v${workflowConfig.workflow_version} (Priority: ${workflowConfig.match_priority})`);
+
+    // 5. Get first step
+    const firstStep = workflowConfig.workflow_config?.steps?.[0];
+    if (!firstStep) {
+      console.log(`⚠️  Workflow has no steps`);
+      await client.query('COMMIT');
+      return res.json({ success: true, data: newCase, warning: 'Workflow has no steps' });
+    }
+
+    console.log(`📝 First step: ${firstStep.name} (${firstStep.code})`);
+
+    // 6. Create workflow instance
+    const instanceResult = await client.query(`
+      INSERT INTO workflow_instances (
+        definition_id, case_id, current_step_id,
+        status, variables, started_at
+      )
+      VALUES ($1, $2, $3, 'running', '{}', NOW())
+      RETURNING *
+    `, [workflowConfig.workflow_definition_id, newCase.id, firstStep.id]);
+
+    const workflowInstance = instanceResult.rows[0];
+    console.log(`✅ Workflow instance: ${workflowInstance.id}`);
+
+    // 7. Set SLA
+    const slaHours = { urgent: 4, high: 24, medium: 72, low: 168 }[priority || 'medium'];
+    const slaDueDate = new Date(Date.now() + slaHours * 60 * 60 * 1000);
+
+    await client.query(`
+      INSERT INTO sla_compliance (
+        case_id, sla_due_date, is_breached, warning_sent, escalation_level
+      )
+      VALUES ($1, $2, false, false, 0)
+    `, [newCase.id, slaDueDate]);
+
+    console.log(`⏰ SLA: ${slaHours}h (Due: ${slaDueDate.toLocaleString('vi-VN')})`);
+
+    await client.query('COMMIT');
+
     res.json({
       success: true,
-      data: result.rows[0]
+      data: newCase,
+      workflow: {
+        instance_id: workflowInstance.id,
+        name: workflowConfig.workflow_name,
+        version: workflowConfig.workflow_version,
+        current_step: firstStep.name,
+        status: 'running',
+        sla_due: slaDueDate
+      }
     });
+
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Create case error:', error);
     res.status(500).json({ success: false, message: error.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -2174,6 +2288,33 @@ app.post('/api/checklists/:documentType/:deviceId/spare-parts', async (req, res)
 // ============================================
 const inventoryRoutes = require('./routes/inventory.routes');
 app.use('/api/inventory', inventoryRoutes(pool));
+
+// ============================================
+// WORKFLOW MANAGEMENT ENDPOINTS
+// ============================================
+const workflowRoutes = require('./routes/workflows.routes');
+app.use('/api/workflows', workflowRoutes(pool));
+
+// ============================================
+// SERVE STATIC FILES (React App)
+// ============================================
+const buildPath = path.join(__dirname, '../../web-app/build');
+app.use(express.static(buildPath));
+
+// Catch all handler: send back React's index.html file for client-side routing
+app.get('*', (req, res) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ success: false, message: 'API endpoint not found' });
+  }
+  
+  res.sendFile(path.join(buildPath, 'index.html'), (err) => {
+    if (err) {
+      console.error('Error serving index.html:', err);
+      res.status(500).send('Error loading application');
+    }
+  });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {

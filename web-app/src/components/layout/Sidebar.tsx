@@ -18,6 +18,7 @@ import {
   People as CustomerIcon,
   Devices as DeviceIcon,
   Engineering as TechnicianIcon,
+  AccountTree as WorkflowIcon,
   Inventory as InventoryIcon,
   Build as ToolsIcon,
   Assignment as ContractIcon,
@@ -136,6 +137,28 @@ const menuItems: MenuItem[] = [
     permission: { resource: 'technicians', action: 'read' },
   },
   {
+    id: 'workflows',
+    label: 'Workflows',
+    icon: <WorkflowIcon />,
+    permission: { resource: 'workflows', action: 'read' },
+    children: [
+      {
+        id: 'workflows-list',
+        label: 'All Workflows',
+        icon: <WorkflowIcon />,
+        path: '/workflows',
+        permission: { resource: 'workflows', action: 'read' },
+      },
+      {
+        id: 'workflows-create',
+        label: 'Create Workflow',
+        icon: <WorkflowIcon />,
+        path: '/workflows/create',
+        permission: { resource: 'workflows', action: 'create' },
+      },
+    ],
+  },
+  {
     id: 'inventory',
     label: 'Inventory',
     icon: <InventoryIcon />,
@@ -213,13 +236,6 @@ const menuItems: MenuItem[] = [
     icon: <SettingsIcon />,
     permission: { resource: 'settings', action: 'read' },
     children: [
-      {
-        id: 'settings-workflows',
-        label: 'Workflows',
-        icon: <SettingsIcon />,
-        path: '/settings/workflows',
-        permission: { resource: 'workflows', action: 'read' },
-      },
       {
         id: 'settings-users',
         label: 'Users & Roles',
